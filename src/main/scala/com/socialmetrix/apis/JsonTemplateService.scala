@@ -3,7 +3,9 @@ package com.socialmetrix.apis
 import javax.inject.{Inject, Singleton}
 
 import akka.actor.ActorSystem
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.socialmetrix.json.Jackson.objectMapper
 import com.socialmetrix.utils.FutureOps.Retry
 import com.socialmetrix.ws.OkResponseUtil._
 import com.typesafe.config.Config
@@ -14,15 +16,20 @@ import play.api.libs.ws.ahc._
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class JsonTemplateService @Inject()(ws: StandaloneAhcWSClient, mapper: ObjectMapper)
+class JsonTemplateService @Inject()(ws: StandaloneAhcWSClient)
                                    (implicit config: Config, ec: ExecutionContext, actorSystem: ActorSystem)
   extends Retry with DefaultBodyWritables {
 
-  def render(data: JsonNode, template: JsonNode): Future[JsonNode] = retry {
+  def render(data: JsonNode, template: JsonNode): Future[Option[JsonNode]] = retry {
     ws
       .url(config.getString("JsonTemplateService.url"))
-      .postOnly2xx(mapper.writeValueAsString(data))
+      .withHttpHeaders("Content-Type" -> "application/json")
+      .postOnly2xx(objectMapper.writeValueAsString(
+        objectMapper.createObjectNode()
+          .set("data", data).asInstanceOf[ObjectNode]
+          .set("template", template)
+      ))
       .map(_.body[String])
-      .map(mapper.readTree)
+      .map(body => Option(objectMapper.readTree(body)))
   }
 }

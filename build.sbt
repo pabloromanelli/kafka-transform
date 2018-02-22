@@ -1,6 +1,6 @@
 name := "kafka-transform"
 
-version := "1.0"
+version := "0.1.0"
 
 scalaVersion := "2.12.4"
 
@@ -17,4 +17,20 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-ahc-ws-standalone" % "1.1.3",
   "com.github.ben-manes.caffeine" % "jcache" % "2.6.1",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
+)
+
+enablePlugins(JavaAppPackaging)
+
+dockerRepository := Some("socialmetrix")
+
+dockerUpdateLatest := true
+
+import com.typesafe.sbt.packager.docker._
+
+dockerCommands := Seq(
+  Cmd("FROM", "openjdk:8u151-jre-alpine3.7"),
+  Cmd("WORKDIR", "/opt/docker"),
+  Cmd("USER", "daemon"),
+  ExecCmd("ENTRYPOINT", "java", "-Xms64m", "-Xmx256m", "-cp", "lib/*", "com.socialmetrix.Main"),
+  Cmd("ADD", "--chown=daemon:daemon opt /opt")
 )

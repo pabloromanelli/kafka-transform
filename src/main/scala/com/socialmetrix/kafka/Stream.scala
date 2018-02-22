@@ -24,11 +24,14 @@ class Stream @Inject()(jsonTemplateEngine: JsonTemplateService, matcher: Matcher
   val topology = buildTopology(kafkaConfig)
   val stream = new KafkaStreams(topology, streamingConfig)
 
+  // TODO implement state listener to close the dependencies when the stream dies
+
   def start(): Unit = {
     // on error close the stream
     stream.setUncaughtExceptionHandler { (t, e) =>
       logger.error("Uncaught exception, closing the stream", e)
       stream.close()
+      throw e
     }
     stream.start()
   }
@@ -54,7 +57,7 @@ class Stream @Inject()(jsonTemplateEngine: JsonTemplateService, matcher: Matcher
       // only keep rules that matches with the data
       .filter((k, v) => matcher.matches(v._2, v._1.query))
       // render the template against the data
-      .mapValues[JsonNode](v => sync(jsonTemplateEngine.render(v._2, v._1.template)))
+      .mapValues[JsonNode](v => sync(jsonTemplateEngine.render(v._2, v._1.template)).get)
       .peek((k, v) => logger.trace("<= " + objectMapper.writeValueAsString(v)))
       .to(kafkaConfig.getString("topic.sink"))
 

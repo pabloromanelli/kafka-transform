@@ -15,7 +15,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class CaffeineHttpCache @Inject()(config: Config)(implicit ec: ExecutionContext) extends Cache {
   val underlying = Caffeine.newBuilder()
-    .refreshAfterWrite(config.getDuration("play.ws.cache.refresh").toMillis, TimeUnit.MILLISECONDS)
     .expireAfterWrite(config.getDuration("play.ws.cache.expire").toMillis, TimeUnit.MILLISECONDS)
     .build[EffectiveURIKey, ResponseEntry]()
 

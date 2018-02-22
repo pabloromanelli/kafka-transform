@@ -13,10 +13,8 @@ if [[ ! -z $(docker images -q "socialmetrix/$APP_NAME:$VERSION") ]]; then
   exit 1
 fi
 
-sbt clean assembly
+sbt clean docker:publishLocal
 
-echo "Building ..."
-docker build -t socialmetrix/$APP_NAME:$VERSION -t socialmetrix/$APP_NAME .
 echo
 echo
 echo "Pushing to the Repository"
