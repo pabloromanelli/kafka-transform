@@ -1,0 +1,30 @@
+version: "3"
+services:
+  template:
+    image: socialmetrix/json-template-service
+    networks:
+      - kafka-matcher
+
+  kafka:
+    image:
+    networks:
+      - kafka-matcher
+
+  rules:
+    image: clue/json-server
+    volumes:
+      - ./mockRules/rules.json:/data/db.json
+
+  matcher:
+    image: socialmetrix/kafka-transform
+    environment:
+      - JsonTemplateService.url=http://template
+      - RulesService.url=http://rules
+    networks:
+      - kafka-matcher
+    depends_on:
+      - kafka
+      - template
+
+networks:
+  kafka-matcher:

@@ -1,0 +1,8 @@
+{
+  "rules": [
+    {
+      "query": "some query",
+      "template": "{{this}}"
+    }
+  ]
+}
