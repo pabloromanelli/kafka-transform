@@ -1,0 +1,13 @@
+{
+  "template": {
+    "fullName": "{{firstName}} {{lastName}} {{age}}"
+  },
+  "data": {
+    "firstName": "Some",
+    "lastName": "Name",
+    "age": 99
+  },
+  "result": {
+    "fullName": "Some Name 99"
+  }
+}

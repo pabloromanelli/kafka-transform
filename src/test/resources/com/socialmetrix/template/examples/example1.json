@@ -1,0 +1,9 @@
+{
+  "template": "{{this}}",
+  "data": {
+    "value": 123
+  },
+  "result": {
+    "value": 123
+  }
+}

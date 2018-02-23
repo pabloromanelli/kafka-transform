@@ -16,7 +16,8 @@ libraryDependencies ++= Seq(
   "com.typesafe" % "config" % "1.3.2",
   "com.typesafe.play" %% "play-ahc-ws-standalone" % "1.1.3",
   "com.github.ben-manes.caffeine" % "jcache" % "2.6.1",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
+  "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 )
 
 enablePlugins(JavaAppPackaging)
