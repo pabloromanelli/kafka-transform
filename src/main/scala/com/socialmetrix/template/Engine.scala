@@ -2,7 +2,7 @@ package com.socialmetrix.template
 
 import java.util.regex.Pattern.quote
 
-import com.fasterxml.jackson.databind.node.{ArrayNode, ObjectNode, TextNode}
+import com.fasterxml.jackson.databind.node.{ArrayNode, ObjectNode, TextNode, ValueNode}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 
 import scala.annotation.tailrec
@@ -16,12 +16,21 @@ object Engine {
   def failOnMissingNode(variable: String, data: JsonNode): Try[JsonNode] =
     Failure(MissingVariable(variable, data))
 
+  case class InvalidFieldName(invalidReplacement: JsonNode, originalField: String)
+    extends RuntimeException(s"Field '$originalField' can't be interpolated because the value is not a value node: '${originalField.toString}'.")
+
+  def failOnInvalidFieldName(invalidReplacement: JsonNode, originalField: String): Try[String] =
+    Failure(InvalidFieldName(invalidReplacement, originalField))
+
 }
 
 class Engine(delimiters: (String, String) = "{{" -> "}}",
              fieldSeparator: String = ".",
              thisIdentifier: String = "this",
-             onMissingNode: (String, JsonNode) => Try[JsonNode] = Engine.failOnMissingNode) {
+             onMissingNode: (String, JsonNode) => Try[JsonNode] = Engine.failOnMissingNode,
+             onInvalidFieldName: (JsonNode, String) => Try[String] = Engine.failOnInvalidFieldName) {
+
+  private val objectMapper = new ObjectMapper()
 
   // Restrictions
   // - Operation ({{#<operation> <node>}})
@@ -47,16 +56,23 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     }
     case j: ObjectNode => Try {
       val result = objectMapper.createObjectNode()
-      j.fields().forEachRemaining(entry =>
-        result.set(entry.getKey, transform(entry.getValue, data).get)
-      )
+      j.fields().forEachRemaining { entry =>
+        val fieldName = fillout(entry.getKey, data)
+          .flatMap {
+            case j: ValueNode => Success(j.asText())
+            case j => onInvalidFieldName(j, entry.getKey)
+          }
+          .get
+        val value = transform(entry.getValue, data).get
+
+        result.set(fieldName, value)
+      }
       result
     }
     // keep it as is on any other case
     case _ => Success(template)
   }
 
-  private val objectMapper = new ObjectMapper()
   private val start = quote(delimiters._1)
   private val end = quote(delimiters._2)
   private val variables = s"$start([^$end]+)$end"
