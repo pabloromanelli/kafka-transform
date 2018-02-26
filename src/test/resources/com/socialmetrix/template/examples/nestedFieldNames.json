@@ -1,0 +1,22 @@
+{
+  "template": {
+    "{{user.name}} {{user.age}}": {
+      "{{user.address.street}}": "{{user.address.number}}"
+    }
+  },
+  "data": {
+    "user": {
+      "name": "Some",
+      "age": 99,
+      "address": {
+        "street": "1st Road",
+        "number": 1234
+      }
+    }
+  },
+  "result": {
+    "Some 99": {
+      "1st Road": 1234
+    }
+  }
+}
