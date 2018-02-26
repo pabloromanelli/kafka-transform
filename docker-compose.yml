@@ -41,7 +41,6 @@ services:
   kafka-transform:
     image: socialmetrix/kafka-transform
     environment:
-      - JsonTemplateService.url=http://template
       - RulesService.url=http://rules/rules
       - kafka.application.id=kafka-transform
       - kafka.bootstrap.servers=kafka:9092
@@ -51,7 +50,6 @@ services:
       - kafka-matcher
     depends_on:
       - kafka
-      - template
 
 networks:
   kafka:

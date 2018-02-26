@@ -2,7 +2,17 @@
   "rules": [
     {
       "query": "some query",
-      "template": "{{this}}"
+      "template": {
+        "origin": "AAA111",
+        "name": "{{value}}"
+      }
+    },
+    {
+      "query": "some query",
+      "template": {
+        "origin": "ABC123",
+        "name": "{{value}}!!!"
+      }
     }
   ]
 }

@@ -83,8 +83,8 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
       j.forEach(child => result.add(transform(child, data).get))
       result
     }
-    // "each" command
-    case JsonObject(field@Command("each", variable)) => {
+    // "map" command
+    case JsonObject(field@Command("map", variable)) => {
       // TODO include $root, $parent and $index on the lookup
       lookup(variable, data).flatMap {
         case array: ArrayNode => Try {

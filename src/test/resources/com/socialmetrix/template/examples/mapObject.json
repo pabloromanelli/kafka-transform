@@ -1,7 +1,7 @@
 {
   "template": {
     "orders": {
-      "{{#each customers}}": {
+      "{{#map customers}}": {
         "order": "One {{menu}} for {{name}}!"
       }
     }
