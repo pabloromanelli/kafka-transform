@@ -1,6 +1,6 @@
 {
   "template": {
-    "{{#map this}}": "number {{this}}"
+    "{{#map $this}}": "number {{$this}}"
   },
   "data": [
     1,

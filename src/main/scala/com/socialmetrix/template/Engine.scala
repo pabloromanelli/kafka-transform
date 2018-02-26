@@ -41,7 +41,7 @@ object Engine {
   */
 class Engine(delimiters: (String, String) = "{{" -> "}}",
              fieldSeparator: String = ".",
-             thisIdentifier: String = "this",
+             thisIdentifier: String = "$this",
              commandPrefix: String = "#",
              onMissingNode: (String, JsonNode) => Try[JsonNode] = Engine.failOnMissingNode,
              onInvalidFieldName: (JsonNode, String) => Try[String] = Engine.failOnInvalidFieldName,
@@ -100,9 +100,10 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
         case json => onInvalidType("array", json)
       }
     }
+    // TODO add a "flatmap" command
     // Regular object
     case j: ObjectNode => Try {
-      // TODO validate it doesn't have any each command on it (to prevent unexpected behaviour)
+      // TODO validate it doesn't have any other command on the field names (to prevent unexpected behaviour)
       val result = objectMapper.createObjectNode()
 
       j.fields().forEachRemaining { entry =>

@@ -1,5 +1,5 @@
 {
-  "template": "{{this}}",
+  "template": "{{$this}}",
   "data": {
     "value": 123
   },
