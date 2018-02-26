@@ -31,6 +31,14 @@ object Engine {
 
 }
 
+/**
+  * String: replaces each "{{node}}" with the corresponding node from the data object (supports nested nodes sepparated by ".")
+  *  - if the node is the only text on the string, it will be replaced by the original data node (retaining type)
+  *  - in any other case it will be translated as text
+  * String: #each node => data node is an array
+  * Any other Value Node: the template node is kept without any change
+  * Container node (Array / Object): every element or field will be mapped one by one with the same logic as before
+  */
 class Engine(delimiters: (String, String) = "{{" -> "}}",
              fieldSeparator: String = ".",
              thisIdentifier: String = "this",
@@ -48,7 +56,7 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
   private val escapedCommandPrefix = quote(commandPrefix)
   private val commandRegex = raw"^$start$escapedCommandPrefix(\S+)\s+([^$end]+)$end$$".r
 
-  object JsonObject {
+  private object JsonObject {
     def unapplySeq(json: JsonNode): Option[Seq[(String, JsonNode)]] = json match {
       case j: ObjectNode => Some(
         j.fields().asScala
@@ -59,27 +67,12 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     }
   }
 
-  object Command {
+  private object Command {
     def unapply(field: (String, JsonNode)): Option[(String, String)] = field match {
       case (commandRegex(commandName, variable), node) => Some(commandName, variable)
       case _ => None
     }
   }
-
-  // Restrictions
-  // - Operation ({{#<operation> <node>}})
-  //   - Must be the only value on a field name
-  //   - The object must have a single field
-
-  // Functionality
-  // `this` is an special data node
-
-  // String: replaces each "{{<node>}}" with the corresponding node from the data object (supports nested nodes sepparated by ".")
-  //  - if the node is the only text on the string, it will be replaced by the original data node (retaining type)
-  //  - in any other case it will be translated as text
-  // String: #each <node> => data node is an array
-  // Any other Value Node: the template node is kept without any change
-  // Container node (Array / Object): every element or field will be mapped one by one with the same logic as before
 
   def transform(template: JsonNode, data: JsonNode): Try[JsonNode] = template match {
     // expand / interpolate strings
@@ -92,8 +85,8 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     }
     // "each" command
     case JsonObject(field@Command("each", variable)) => {
+      // TODO include $root, $parent and $index on the lookup
       lookup(variable, data).flatMap {
-        // TODO include $root, $parent and $index on the lookup
         case array: ArrayNode => Try {
           val result = objectMapper.createArrayNode()
           val eachTemplate = field._2

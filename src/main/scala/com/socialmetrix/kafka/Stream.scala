@@ -4,9 +4,10 @@ import java.util.Properties
 import javax.inject.{Inject, Singleton}
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.socialmetrix.apis.{JsonTemplateService, Rule, RulesService}
+import com.socialmetrix.apis.{Rule, RulesService}
 import com.socialmetrix.json.Jackson.objectMapper
 import com.socialmetrix.lucene.Matcher
+import com.socialmetrix.template.Engine
 import com.socialmetrix.utils.FutureOps.sync
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -16,13 +17,14 @@ import org.apache.kafka.streams.{KafkaStreams, StreamsBuilder, Topology}
 import scala.collection.JavaConverters._
 
 @Singleton
-class Stream @Inject()(jsonTemplateEngine: JsonTemplateService, matcher: Matcher,
-                       rulesService: RulesService)(implicit config: Config) extends StrictLogging {
+class Stream @Inject()(matcher: Matcher, rulesService: RulesService)
+                      (implicit config: Config) extends StrictLogging {
 
   val kafkaConfig = config.getConfig("kafka")
   val streamingConfig = kafkaConfig.toProperties
   val topology = buildTopology(kafkaConfig)
   val stream = new KafkaStreams(topology, streamingConfig)
+  val templateEngine = new Engine()
 
   // TODO implement state listener to close the dependencies when the stream dies
 
@@ -57,7 +59,7 @@ class Stream @Inject()(jsonTemplateEngine: JsonTemplateService, matcher: Matcher
       // only keep rules that matches with the data
       .filter((k, v) => matcher.matches(v._2, v._1.query))
       // render the template against the data
-      .mapValues[JsonNode](v => sync(jsonTemplateEngine.render(v._2, v._1.template)).get)
+      .mapValues[JsonNode](v => templateEngine.transform(v._1.template, v._2).get)
       .peek((k, v) => logger.trace("<= " + objectMapper.writeValueAsString(v)))
       .to(kafkaConfig.getString("topic.sink"))
 

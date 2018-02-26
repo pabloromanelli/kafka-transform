@@ -1,0 +1,13 @@
+{
+  "template": {
+    "{{#each this}}": "number {{this}}"
+  },
+  "data": [
+    1,
+    2
+  ],
+  "result": [
+    "number 1",
+    "number 2"
+  ]
+}

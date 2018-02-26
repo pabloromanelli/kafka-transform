@@ -31,11 +31,6 @@ services:
     depends_on:
       - kafka
 
-  template:
-    image: socialmetrix/json-template-service
-    networks:
-      - kafka-matcher
-
   rules:
     image: clue/json-server
     volumes:
