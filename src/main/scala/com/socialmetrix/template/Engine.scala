@@ -29,6 +29,15 @@ object Engine {
   def failOnInvalidType(expectedType: String, data: JsonNode): Try[JsonNode] =
     Failure(InvalidType(expectedType, data))
 
+  def apply() = new Engine(
+    "{{" -> "}}",
+    ".",
+    "$",
+    "#",
+    failOnMissingNode,
+    failOnInvalidFieldName,
+    failOnInvalidType)
+
 }
 
 /**
@@ -39,13 +48,13 @@ object Engine {
   * Any other Value Node: the template node is kept without any change
   * Container node (Array / Object): every element or field will be mapped one by one with the same logic as before
   */
-class Engine(delimiters: (String, String) = "{{" -> "}}",
-             fieldSeparator: String = ".",
-             metaPrefix: String = "$",
-             commandPrefix: String = "#",
-             onMissingNode: (String, JsonNode) => Try[JsonNode] = Engine.failOnMissingNode,
-             onInvalidFieldName: (JsonNode, String) => Try[String] = Engine.failOnInvalidFieldName,
-             onInvalidType: (String, JsonNode) => Try[JsonNode] = Engine.failOnInvalidType) {
+class Engine(delimiters: (String, String),
+             fieldSeparator: String,
+             metaPrefix: String,
+             commandPrefix: String,
+             onMissingNode: (String, JsonNode) => Try[JsonNode],
+             onInvalidFieldName: (JsonNode, String) => Try[String],
+             onInvalidType: (String, JsonNode) => Try[JsonNode]) {
 
   private val objectMapper = new ObjectMapper()
 
@@ -87,25 +96,20 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
   }
 
   def transform(template: JsonNode, data: JsonNode): Try[JsonNode] =
-    transformRecursive(template, data, Map(
-      thisMeta -> data,
-      rootMeta -> data
-    ))
+    transformRecursive(template, data)
 
-  private def transformRecursive(template: JsonNode,
-                                 data: JsonNode,
-                                 meta: Map[String, JsonNode]): Try[JsonNode] = template match {
+  private def transformRecursive(template: JsonNode, data: JsonNode): Try[JsonNode] = template match {
     // expand / interpolate strings
-    case j: TextNode => fillout(j.textValue(), data, meta)
+    case j: TextNode => fillout(j.textValue(), data)
     // recurse over arrays
     case j: ArrayNode => Try {
       val result = objectMapper.createArrayNode()
-      j.forEach(child => result.add(transformRecursive(child, data, meta).get))
+      j.forEach(child => result.add(transformRecursive(child, data).get))
       result
     }
     // "map" / "flatmap" command
     case JsonObject(field@MapFlatmapCommand(command, variable)) => {
-      lookup(variable, data, meta).flatMap {
+      lookup(variable, data).flatMap {
         case array: ArrayNode => Try {
           val result = objectMapper.createArrayNode()
           val eachTemplate = field._2
@@ -113,11 +117,7 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
           array.asScala.zipWithIndex.foreach { case (child, i) =>
             val newChild = transformRecursive(
               eachTemplate,
-              child,
-              meta
-                + (indexMeta -> new IntNode(i))
-                + (parentMeta -> data)
-            )
+              child)
             if (command == mapCommand) // map
               result.add(newChild.get)
             else // flatmap
@@ -138,13 +138,13 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
       val result = objectMapper.createObjectNode()
 
       j.fields().forEachRemaining { entry =>
-        val fieldName = fillout(entry.getKey, data, meta)
+        val fieldName = fillout(entry.getKey, data)
           .flatMap {
             case j: ValueNode => Success(j.asText())
             case j => onInvalidFieldName(j, entry.getKey)
           }
           .get
-        val value = transformRecursive(entry.getValue, data, meta).get
+        val value = transformRecursive(entry.getValue, data).get
 
         result.set(fieldName, value)
       }
@@ -159,15 +159,15 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     * If the variable is the only value of the string, it replaces the whole string with the actual data node.
     * In any other case, uses the serialized version of the data node.
     */
-  private def fillout(text: String, data: JsonNode, meta: Map[String, JsonNode]): Try[JsonNode] = text match {
+  private def fillout(text: String, data: JsonNode): Try[JsonNode] = text match {
     // variable replacement
     case singleVariableRegex(variable) =>
-      lookup(variable, data, meta)
+      lookup(variable, data)
     // string interpolation
     case _ => Try {
       new TextNode(
         variablesRegex.replaceAllIn(text, m =>
-          lookup(m.group(1), data, meta).get match {
+          lookup(m.group(1), data).get match {
             case j: TextNode => j.textValue()
             case j => objectMapper.writeValueAsString(j)
           }
@@ -191,7 +191,7 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     if (variable == thisMeta) {
       Success(data)
     } else if (variable.startsWith(s"$thisMeta$fieldSeparator")) {
-      lookup(variable.stripPrefix(s"$thisMeta$fieldSeparator"), data, meta)
+      lookup(variable.stripPrefix(s"$thisMeta$fieldSeparator"), data)
     } else {
       val path = "/" + variable.replace(fieldSeparator, "/")
       val result = data.at(path)
@@ -215,7 +215,9 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
   }
 
   object Context {
-    def apply(json: JsonNode, root: Context)
+    def apply(json: JsonNode) = {
+      val a:Context = new Context(json, a, Failure(???), Failure(???))
+    }
   }
 
   case class Context(json: JsonNode,
