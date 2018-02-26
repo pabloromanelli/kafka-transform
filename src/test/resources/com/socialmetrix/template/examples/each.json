@@ -1,0 +1,45 @@
+{
+  "template": {
+    "orders": {
+      "{{#each customers}}": {
+        "order": "One {{menu}} for {{name}}!"
+      }
+    }
+  },
+  "data": {
+    "customers": [
+      {
+        "name": "Hatter",
+        "menu": "miso ramen"
+      },
+      {
+        "name": "March Hare",
+        "menu": "tonkotsu ramen"
+      },
+      {
+        "name": "Dormouse",
+        "menu": "miso ramen"
+      },
+      {
+        "name": "Alice",
+        "menu": "cup noodles"
+      }
+    ]
+  },
+  "result": {
+    "orders": [
+      {
+        "order": "One miso ramen for Hatter!"
+      },
+      {
+        "order": "One tonkotsu ramen for March Hare!"
+      },
+      {
+        "order": "One miso ramen for Dormouse!"
+      },
+      {
+        "order": "One cup noodles for Alice!"
+      }
+    ]
+  }
+}
