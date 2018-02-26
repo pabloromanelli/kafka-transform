@@ -1,0 +1,66 @@
+{
+  "template": {
+    "map": {
+      "{{#map customers}}": [
+        "One {{menu}}",
+        "for {{name}}!"
+      ]
+    },
+    "flatmap": {
+      "{{#flatmap customers}}": [
+        "One {{menu}}",
+        "for {{name}}!"
+      ]
+    }
+  },
+  "data": {
+    "customers": [
+      {
+        "name": "Hatter",
+        "menu": "miso ramen"
+      },
+      {
+        "name": "March Hare",
+        "menu": "tonkotsu ramen"
+      },
+      {
+        "name": "Dormouse",
+        "menu": "miso ramen"
+      },
+      {
+        "name": "Alice",
+        "menu": "cup noodles"
+      }
+    ]
+  },
+  "result": {
+    "map": [
+      [
+        "One miso ramen",
+        "for Hatter!"
+      ],
+      [
+        "One tonkotsu ramen",
+        "for March Hare!"
+      ],
+      [
+        "One miso ramen",
+        "for Dormouse!"
+      ],
+      [
+        "One cup noodles",
+        "for Alice!"
+      ]
+    ],
+    "flatmap": [
+      "One miso ramen",
+      "for Hatter!",
+      "One tonkotsu ramen",
+      "for March Hare!",
+      "One miso ramen",
+      "for Dormouse!",
+      "One cup noodles",
+      "for Alice!"
+    ]
+  }
+}

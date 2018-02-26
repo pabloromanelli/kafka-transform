@@ -41,20 +41,33 @@ object Engine {
   */
 class Engine(delimiters: (String, String) = "{{" -> "}}",
              fieldSeparator: String = ".",
-             thisIdentifier: String = "$this",
+             metaPrefix: String = "$",
+             thisIdentifier: String = "this",
              commandPrefix: String = "#",
              onMissingNode: (String, JsonNode) => Try[JsonNode] = Engine.failOnMissingNode,
              onInvalidFieldName: (JsonNode, String) => Try[String] = Engine.failOnInvalidFieldName,
              onInvalidType: (String, JsonNode) => Try[JsonNode] = Engine.failOnInvalidType) {
 
   private val objectMapper = new ObjectMapper()
+
+  // delimiters
   private val start = quote(delimiters._1)
   private val end = quote(delimiters._2)
+
+  // variables
   private val variables = s"$start([^$end]+)$end"
   private val variablesRegex = variables.r
   private val singleVariableRegex = s"^$variables$$".r
+
+  // commands
   private val escapedCommandPrefix = quote(commandPrefix)
-  private val commandRegex = raw"^$start$escapedCommandPrefix(\S+)\s+([^$end]+)$end$$".r
+  private val mapCommand = "map"
+  private val flatmapCommand = "flatmap"
+  private val mapFlatmapRegex =
+    (raw"^$start" +
+      raw"$escapedCommandPrefix($mapCommand|$flatmapCommand)\s+" + // #map|#flatmap
+      raw"([^$end]+)" + // variable
+      raw"$end$$").r
 
   private object JsonObject {
     def unapplySeq(json: JsonNode): Option[Seq[(String, JsonNode)]] = json match {
@@ -67,14 +80,17 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     }
   }
 
-  private object Command {
+  private object MapFlatmapCommand {
     def unapply(field: (String, JsonNode)): Option[(String, String)] = field match {
-      case (commandRegex(commandName, variable), node) => Some(commandName, variable)
+      case (mapFlatmapRegex(commandName, variable), node) => Some(commandName, variable)
       case _ => None
     }
   }
 
-  def transform(template: JsonNode, data: JsonNode): Try[JsonNode] = template match {
+  def transform(template: JsonNode, data: JsonNode): Try[JsonNode] =
+    transform(template, data, data)
+
+  private def transform(template: JsonNode, data: JsonNode, root: JsonNode): Try[JsonNode] = template match {
     // expand / interpolate strings
     case j: TextNode => fillout(j.textValue(), data)
     // recurse over arrays
@@ -84,15 +100,20 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
       result
     }
     // "map" command
-    case JsonObject(field@Command("map", variable)) => {
-      // TODO include $root, $parent and $index on the lookup
+    case JsonObject(field@MapFlatmapCommand(command, variable)) => {
       lookup(variable, data).flatMap {
         case array: ArrayNode => Try {
           val result = objectMapper.createArrayNode()
           val eachTemplate = field._2
 
           array.forEach(child =>
-            result.add(transform(eachTemplate, child).get)
+            if (command == mapCommand) // map
+              result.add(transform(eachTemplate, child).get)
+            else // flatmap
+              result.addAll(transform(eachTemplate, child).flatMap {
+                case j: ArrayNode => Success(j)
+                case j => onInvalidType("array", j).asInstanceOf[Try[ArrayNode]]
+              }.get)
           )
 
           result
@@ -100,7 +121,6 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
         case json => onInvalidType("array", json)
       }
     }
-    // TODO add a "flatmap" command
     // Regular object
     case j: ObjectNode => Try {
       // TODO validate it doesn't have any other command on the field names (to prevent unexpected behaviour)
@@ -148,13 +168,14 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
   /**
     * Find data node by field name.
     * It could be a nested field name.
+    * TODO include $root, $parent and $index on the lookup
     */
   @tailrec
   private def lookup(variable: String, data: JsonNode): Try[JsonNode] = {
-    if (variable == thisIdentifier) {
+    if (variable == metaPrefix + thisIdentifier) {
       Success(data)
-    } else if (variable.startsWith(s"$thisIdentifier$fieldSeparator")) {
-      lookup(variable.stripPrefix(s"$thisIdentifier$fieldSeparator"), data)
+    } else if (variable.startsWith(s"$metaPrefix$thisIdentifier$fieldSeparator")) {
+      lookup(variable.stripPrefix(s"$metaPrefix$thisIdentifier$fieldSeparator"), data)
     } else {
       val path = "/" + variable.replace(fieldSeparator, "/")
       val result = data.at(path)
