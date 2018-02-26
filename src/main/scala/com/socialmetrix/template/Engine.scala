@@ -184,6 +184,7 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     * TODO support indexed access (numeric index on arrays)
     * TODO support ignore missing fields {{?field}}
     * TODO provide a way to escape text
+    * TODO compile the template to calc lookups more efficiently
     */
   @tailrec
   private def lookup(variable: String, context: Context): Try[JsonNode] = {
@@ -229,17 +230,21 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
       case `rootMeta` :: rest => root.recLookup(rest)
       case `indexMeta` :: List() => index.map(i => Context(new IntNode(i), root, parent, index))
       case `indexMeta` :: rest => Failure(??? /*can't have fields after index*/)
-      case Int(index) :: rest if json.isArray => {
-        Option(json.get(index))
-          .map(child => Context(child, root, Success(this), Success(index)))
+      case Int(i) :: rest if json.isArray => {
+        Option(json.get(i))
+          .map(child => Context(child, root, Success(this), Success(i)))
           .map(_.recLookup(rest))
-          .getOrElse(Failure(???))
+          .getOrElse(Failure(??? /*invalid array index*/))
       }
       case fieldName :: rest => {
         Option(json.get(fieldName))
+          // TODO get or else here (to allow "missing node" recovery to continue the lookup)
           .map(child => Context(child, root, Success(this), index))
           .map(_.recLookup(rest))
-          .getOrElse(Failure(???))
+          .getOrElse(
+            onMissingNode(fieldName, json)
+              .map(j => Context(j, root, parent, index))
+          )
       }
     }
 
