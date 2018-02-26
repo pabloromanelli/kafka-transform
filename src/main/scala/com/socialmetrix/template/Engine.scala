@@ -68,12 +68,6 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
       raw"([^$end]+)" + // variable
       raw"$end$$").r
 
-  // meta
-  private val thisMeta = metaPrefix + "this"
-  private val rootMeta = metaPrefix + "root"
-  private val parentMeta = metaPrefix + "parent"
-  private val indexMeta = metaPrefix + "index"
-
   private object JsonObject {
     def unapplySeq(json: JsonNode): Option[Seq[(String, JsonNode)]] = json match {
       case j: ObjectNode => Some(
@@ -187,11 +181,12 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     * It could be a nested field name.
     * TODO include $root, $parent and $index on the lookup
     * TODO allow $parent.$parent.$parent to be available
+    * TODO support indexed access (numeric index on arrays)
+    * TODO support ignore missing fields {{?field}}
+    * TODO provide a way to escape text
     */
   @tailrec
-  private def lookup(variable: String, data: JsonNode, meta: Map[String, JsonNode]): Try[JsonNode] = {
-    meta.get(variable)
-
+  private def lookup(variable: String, context: Context): Try[JsonNode] = {
     if (variable == thisMeta) {
       Success(data)
     } else if (variable.startsWith(s"$thisMeta$fieldSeparator")) {
@@ -207,5 +202,54 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
       }
     }
   }
+
+  // meta
+  private val thisMeta = metaPrefix + "this"
+  private val rootMeta = metaPrefix + "root"
+  private val parentMeta = metaPrefix + "parent"
+  private val indexMeta = metaPrefix + "index"
+
+  private object Int {
+    def unapply(field: String): Option[Int] = Try(field.toInt).toOption
+  }
+
+  object Context {
+    def apply(json: JsonNode, root: Context)
+  }
+
+  case class Context(json: JsonNode,
+                     root: Context,
+                     parent: Try[Context] = Failure(??? /*no parent defined for ???*/),
+                     index: Try[Int] = Failure(??? /*no index defined for ???*/)) {
+
+    private def recLookup(variable: List[String]): Try[Context] = variable match {
+      case List() => Success(this)
+      case `thisMeta` :: rest => recLookup(rest)
+      case `parentMeta` :: rest => parent.flatMap(_.recLookup(rest))
+      case `rootMeta` :: rest => root.recLookup(rest)
+      case `indexMeta` :: List() => index.map(i => Context(new IntNode(i), root, parent, index))
+      case `indexMeta` :: rest => Failure(??? /*can't have fields after index*/)
+      case Int(index) :: rest if json.isArray => {
+        Option(json.get(index))
+          .map(child => Context(child, root, Success(this), Success(index)))
+          .map(_.recLookup(rest))
+          .getOrElse(Failure(???))
+      }
+      case fieldName :: rest => {
+        Option(json.get(fieldName))
+          .map(child => Context(child, root, Success(this), index))
+          .map(_.recLookup(rest))
+          .getOrElse(Failure(???))
+      }
+    }
+
+    def lookup(variable: String): Try[Context] = {
+      variable.split(fieldSeparator).toList match {
+        case List() => Failure(???)
+        case list => recLookup(list)
+      }
+    }
+  }
+
 
 }
