@@ -2,14 +2,14 @@
   "template": {
     "map": {
       "{{#map customers}}": [
-        "One {{menu}}",
-        "for {{name}}!"
+        "{{$index}}-One {{menu}}",
+        "{{$index}}-for {{name}}!"
       ]
     },
     "flatmap": {
       "{{#flatmap customers}}": [
-        "One {{menu}}",
-        "for {{name}}!"
+        "{{$index}}-One {{menu}}",
+        "{{$index}}-for {{name}}!"
       ]
     }
   },
@@ -36,31 +36,31 @@
   "result": {
     "map": [
       [
-        "One miso ramen",
-        "for Hatter!"
+        "0-One miso ramen",
+        "0-for Hatter!"
       ],
       [
-        "One tonkotsu ramen",
-        "for March Hare!"
+        "1-One tonkotsu ramen",
+        "1-for March Hare!"
       ],
       [
-        "One miso ramen",
-        "for Dormouse!"
+        "2-One miso ramen",
+        "2-for Dormouse!"
       ],
       [
-        "One cup noodles",
-        "for Alice!"
+        "3-One cup noodles",
+        "3-for Alice!"
       ]
     ],
     "flatmap": [
-      "One miso ramen",
-      "for Hatter!",
-      "One tonkotsu ramen",
-      "for March Hare!",
-      "One miso ramen",
-      "for Dormouse!",
-      "One cup noodles",
-      "for Alice!"
+      "0-One miso ramen",
+      "0-for Hatter!",
+      "1-One tonkotsu ramen",
+      "1-for March Hare!",
+      "2-One miso ramen",
+      "2-for Dormouse!",
+      "3-One cup noodles",
+      "3-for Alice!"
     ]
   }
 }

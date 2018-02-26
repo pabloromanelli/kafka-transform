@@ -32,6 +32,10 @@ class EngineTest extends WordSpec with Matchers {
       }
     }
 
+    "fail on multiple fields on map / flatmap" in {
+      fail
+    }
+
   }
 
 }

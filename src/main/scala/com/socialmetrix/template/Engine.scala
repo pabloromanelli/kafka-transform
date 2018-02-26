@@ -2,7 +2,7 @@ package com.socialmetrix.template
 
 import java.util.regex.Pattern.quote
 
-import com.fasterxml.jackson.databind.node.{ArrayNode, ObjectNode, TextNode, ValueNode}
+import com.fasterxml.jackson.databind.node._
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 
 import scala.annotation.tailrec
@@ -42,7 +42,6 @@ object Engine {
 class Engine(delimiters: (String, String) = "{{" -> "}}",
              fieldSeparator: String = ".",
              metaPrefix: String = "$",
-             thisIdentifier: String = "this",
              commandPrefix: String = "#",
              onMissingNode: (String, JsonNode) => Try[JsonNode] = Engine.failOnMissingNode,
              onInvalidFieldName: (JsonNode, String) => Try[String] = Engine.failOnInvalidFieldName,
@@ -69,6 +68,12 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
       raw"([^$end]+)" + // variable
       raw"$end$$").r
 
+  // meta
+  private val thisMeta = metaPrefix + "this"
+  private val rootMeta = metaPrefix + "root"
+  private val parentMeta = metaPrefix + "parent"
+  private val indexMeta = metaPrefix + "index"
+
   private object JsonObject {
     def unapplySeq(json: JsonNode): Option[Seq[(String, JsonNode)]] = json match {
       case j: ObjectNode => Some(
@@ -88,33 +93,45 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
   }
 
   def transform(template: JsonNode, data: JsonNode): Try[JsonNode] =
-    transform(template, data, data)
+    transformRecursive(template, data, Map(
+      thisMeta -> data,
+      rootMeta -> data
+    ))
 
-  private def transform(template: JsonNode, data: JsonNode, root: JsonNode): Try[JsonNode] = template match {
+  private def transformRecursive(template: JsonNode,
+                                 data: JsonNode,
+                                 meta: Map[String, JsonNode]): Try[JsonNode] = template match {
     // expand / interpolate strings
-    case j: TextNode => fillout(j.textValue(), data)
+    case j: TextNode => fillout(j.textValue(), data, meta)
     // recurse over arrays
     case j: ArrayNode => Try {
       val result = objectMapper.createArrayNode()
-      j.forEach(child => result.add(transform(child, data).get))
+      j.forEach(child => result.add(transformRecursive(child, data, meta).get))
       result
     }
-    // "map" command
+    // "map" / "flatmap" command
     case JsonObject(field@MapFlatmapCommand(command, variable)) => {
-      lookup(variable, data).flatMap {
+      lookup(variable, data, meta).flatMap {
         case array: ArrayNode => Try {
           val result = objectMapper.createArrayNode()
           val eachTemplate = field._2
 
-          array.forEach(child =>
+          array.asScala.zipWithIndex.foreach { case (child, i) =>
+            val newChild = transformRecursive(
+              eachTemplate,
+              child,
+              meta
+                + (indexMeta -> new IntNode(i))
+                + (parentMeta -> data)
+            )
             if (command == mapCommand) // map
-              result.add(transform(eachTemplate, child).get)
+              result.add(newChild.get)
             else // flatmap
-              result.addAll(transform(eachTemplate, child).flatMap {
+              result.addAll(newChild.flatMap {
                 case j: ArrayNode => Success(j)
                 case j => onInvalidType("array", j).asInstanceOf[Try[ArrayNode]]
               }.get)
-          )
+          }
 
           result
         }
@@ -127,13 +144,13 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
       val result = objectMapper.createObjectNode()
 
       j.fields().forEachRemaining { entry =>
-        val fieldName = fillout(entry.getKey, data)
+        val fieldName = fillout(entry.getKey, data, meta)
           .flatMap {
             case j: ValueNode => Success(j.asText())
             case j => onInvalidFieldName(j, entry.getKey)
           }
           .get
-        val value = transform(entry.getValue, data).get
+        val value = transformRecursive(entry.getValue, data, meta).get
 
         result.set(fieldName, value)
       }
@@ -148,15 +165,15 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     * If the variable is the only value of the string, it replaces the whole string with the actual data node.
     * In any other case, uses the serialized version of the data node.
     */
-  private def fillout(text: String, data: JsonNode): Try[JsonNode] = text match {
+  private def fillout(text: String, data: JsonNode, meta: Map[String, JsonNode]): Try[JsonNode] = text match {
     // variable replacement
     case singleVariableRegex(variable) =>
-      lookup(variable, data)
+      lookup(variable, data, meta)
     // string interpolation
     case _ => Try {
       new TextNode(
         variablesRegex.replaceAllIn(text, m =>
-          lookup(m.group(1), data).get match {
+          lookup(m.group(1), data, meta).get match {
             case j: TextNode => j.textValue()
             case j => objectMapper.writeValueAsString(j)
           }
@@ -169,13 +186,16 @@ class Engine(delimiters: (String, String) = "{{" -> "}}",
     * Find data node by field name.
     * It could be a nested field name.
     * TODO include $root, $parent and $index on the lookup
+    * TODO allow $parent.$parent.$parent to be available
     */
   @tailrec
-  private def lookup(variable: String, data: JsonNode): Try[JsonNode] = {
-    if (variable == metaPrefix + thisIdentifier) {
+  private def lookup(variable: String, data: JsonNode, meta: Map[String, JsonNode]): Try[JsonNode] = {
+    meta.get(variable)
+
+    if (variable == thisMeta) {
       Success(data)
-    } else if (variable.startsWith(s"$metaPrefix$thisIdentifier$fieldSeparator")) {
-      lookup(variable.stripPrefix(s"$metaPrefix$thisIdentifier$fieldSeparator"), data)
+    } else if (variable.startsWith(s"$thisMeta$fieldSeparator")) {
+      lookup(variable.stripPrefix(s"$thisMeta$fieldSeparator"), data, meta)
     } else {
       val path = "/" + variable.replace(fieldSeparator, "/")
       val result = data.at(path)
