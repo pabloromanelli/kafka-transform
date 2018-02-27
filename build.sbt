@@ -17,7 +17,11 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" %% "play-ahc-ws-standalone" % "1.1.3",
   "com.github.ben-manes.caffeine" % "jcache" % "2.6.1",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
-  "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+  "org.apache.lucene" % "lucene-memory" % "7.2.1",
+  "org.apache.lucene" % "lucene-queries" % "7.2.1",
+  "org.apache.lucene" % "lucene-queryparser" % "7.2.1",
+  "org.apache.lucene" % "lucene-analyzers-common" % "7.2.1",
+  "org.scalatest" %% "scalatest" % "3.0.5" % Test
 )
 
 enablePlugins(JavaAppPackaging)

@@ -4,6 +4,7 @@ import java.util.Properties
 import javax.inject.{Inject, Singleton}
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.socialmetrix.apis.{Rule, RulesService}
 import com.socialmetrix.json.Jackson.objectMapper
 import com.socialmetrix.lucene.Matcher
@@ -56,8 +57,10 @@ class Stream @Inject()(matcher: Matcher, rulesService: RulesService)
         .map(rule => (rule, data))
         .asJava
     )
+      // only keep json objects
+      .filter((k, v) => v._2.isObject)
       // only keep rules that matches with the data
-      .filter((k, v) => matcher.matches(v._2, v._1.query))
+      .filter((k, v) => matcher.matches(v._2.asInstanceOf[ObjectNode], v._1.query))
       // render the template against the data
       .mapValues[JsonNode](v => templateEngine.transform(v._1.template, v._2).get)
       .peek((k, v) => logger.trace("<= " + objectMapper.writeValueAsString(v)))
