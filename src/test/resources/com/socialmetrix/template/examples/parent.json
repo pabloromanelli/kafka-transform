@@ -1,0 +1,47 @@
+{
+  "data": {
+    "first": "John",
+    "last": "Doe",
+    "grade": 8,
+    "exams": [
+      {
+        "subject": "Maths",
+        "test": "term1",
+        "marks": 90
+      },
+      {
+        "subject": "Biology",
+        "test": "term1",
+        "marks": 86
+      }
+    ]
+  },
+  "template": {
+    "{{#map exams}}": {
+      "first": "{{$parent.first}}",
+      "last": "{{$parent.last}}",
+      "marks": "{{marks}}",
+      "test": "{{test}}",
+      "subject": "{{subject}}",
+      "grade": "{{$parent.grade}}"
+    }
+  },
+  "result": [
+    {
+      "first": "John",
+      "last": "Doe",
+      "marks": 90,
+      "test": "term1",
+      "subject": "Maths",
+      "grade": 8
+    },
+    {
+      "first": "John",
+      "last": "Doe",
+      "marks": 86,
+      "test": "term1",
+      "subject": "Biology",
+      "grade": 8
+    }
+  ]
+}
