@@ -3,6 +3,7 @@ package com.socialmetrix
 import akka.actor.ActorSystem
 import com.google.inject.{AbstractModule, Guice, Injector}
 import com.socialmetrix.kafka.Stream
+import com.socialmetrix.lucene.Matcher
 import com.socialmetrix.ws.WsModule
 import com.typesafe.config.{Config, ConfigFactory}
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
@@ -37,6 +38,7 @@ object Main {
       val config = ConfigFactory.systemEnvironment().withFallback(ConfigFactory.load())
       bind(classOf[Config]).toInstance(config)
       bind(classOf[ExecutionContext]).toInstance(scala.concurrent.ExecutionContext.global)
+      bind(classOf[Matcher]).toInstance(new Matcher())
     }
   }
 

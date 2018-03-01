@@ -127,7 +127,14 @@ class MatcherTest extends WordSpec with Matchers with TableDrivenPropertyChecks 
       ("""b.c:*23""", true),
       ("b.d.f:j*", true),
       // TODO can we support * for field names?
-      ("*:abc", false)
+      ("*:abc", false),
+
+      // boolean ops
+      ("a:120 OR a:\\-123", true),
+      ("a:[-123 TO -100] AND a:{-125 TO -120}", true),
+      ("a:{-123 TO -100] AND a:{-125 TO -120}", false),
+      ("(a:[100 TO 120] AND b.d.g:1000) OR (b.d.g:1000 AND a:\\-123)", true),
+      ("(a:[100 TO 120] AND b.d.g:1000) OR (b.d.g:1001 AND a:\\-123)", false)
     )
 
   "Lucene Matcher" should {

@@ -1,17 +1,17 @@
 {
   "rules": [
     {
-      "query": "some query",
+      "query": "value:[5 TO 10}",
       "template": {
-        "origin": "AAA111",
-        "name": "{{value}}"
+        "expression": "5 <= {{value}} < 10",
+        "value": "{{value}}"
       }
     },
     {
-      "query": "some query",
+      "query": "value:9 OR value:15",
       "template": {
-        "origin": "ABC123",
-        "name": "{{value}}!!!"
+        "expression": "{{value}} is 9 or 15",
+        "value": "{{value}}"
       }
     }
   ]

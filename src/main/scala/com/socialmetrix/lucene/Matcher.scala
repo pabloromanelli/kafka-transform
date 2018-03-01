@@ -20,9 +20,7 @@ class Matcher(fieldSeparator: String = ".", queryParser: QueryParser = NumericQu
 
   def matches(data: ObjectNode, query: String): Boolean = {
     buildIndex(data)
-      .search(
-        queryParser.parse(query)
-      ) > 0
+      .search(queryParser.parse(query)) > 0
   }
 
   protected def buildIndex(data: ObjectNode): MemoryIndex = {
@@ -64,7 +62,7 @@ object NumericQueryParser extends QueryParser("", lowerCaseASCIIFoldingAnalyzer)
     lazy val triedDouble2 = Try(part2.toDouble).map(p => if (endInclusive) p else DoublePoint.nextDown(p))
 
     if (part1 == null ^ part2 == null) {
-      // if one of the is null (and not both) => wildcard query
+      // if one of them is null (and not both) => wildcard query
       if (triedLong1.orElse(triedLong2).isSuccess) {
         LongPoint.newRangeQuery(
           field,
