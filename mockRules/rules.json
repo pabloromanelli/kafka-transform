@@ -3,14 +3,14 @@
     {
       "query": "value:[5 TO 10}",
       "template": {
-        "expression": "5 <= {{value}} < 10",
+        "display": "5 <= {{value}} < 10",
         "value": "{{value}}"
       }
     },
     {
       "query": "value:9 OR value:15",
       "template": {
-        "expression": "{{value}} is 9 or 15",
+        "display": "{{value}} is 9 or 15",
         "value": "{{value}}"
       }
     }

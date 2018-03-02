@@ -1,6 +1,7 @@
 package com.socialmetrix.kafka
 
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 import javax.inject.{Inject, Singleton}
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -12,6 +13,7 @@ import com.socialmetrix.template.Engine
 import com.socialmetrix.utils.FutureOps.sync
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import org.apache.kafka.streams.KafkaStreams.State
 import org.apache.kafka.streams.kstream.Predicate
 import org.apache.kafka.streams.{KafkaStreams, StreamsBuilder, Topology}
 
@@ -25,21 +27,29 @@ class Stream @Inject()(matcher: Matcher, rulesService: RulesService)
   val streamingConfig = kafkaConfig.toProperties
   val topology = buildTopology(kafkaConfig)
   val stream = new KafkaStreams(topology, streamingConfig)
+  stream.setUncaughtExceptionHandler { (t, e) =>
+    logger.error("Uncaught exception on kafka streams", e)
+  }
   val templateEngine = new Engine()
 
-  // TODO implement state listener to close the dependencies when the stream dies
+  def setCloseListener(f: => Unit) = {
+    stream.setStateListener((newState, oldState) => {
+      newState match {
+        case State.ERROR => stop()
+        case State.NOT_RUNNING => f
+        case _ => // do nothing
+      }
+    })
+  }
 
   def start(): Unit = {
-    // on error close the stream
-    stream.setUncaughtExceptionHandler { (t, e) =>
-      logger.error("Uncaught exception, closing the stream", e)
-      stream.close()
-      throw e
-    }
     stream.start()
   }
 
-  def stop(): Unit = stream.close()
+  def stop(): Unit = {
+    // timeout to avoid deadlock
+    stream.close(5, TimeUnit.SECONDS)
+  }
 
   private def buildTopology(kafkaConfig: Config): Topology = {
     val builder = new StreamsBuilder
@@ -51,14 +61,14 @@ class Stream @Inject()(matcher: Matcher, rulesService: RulesService)
     builder
       .stream[AnyRef, JsonNode](kafkaConfig.getString("topic.source"))
       .peek((k, v) => logger.trace("=> " + objectMapper.writeValueAsString(v)))
-      // create a new message for each rule with the current message
+      // only keep json objects
+      .filter((k, v) => v.isObject)
+      // create a new message for each rule
       .flatMapValues[(Rule, JsonNode)](data =>
       sync(rulesService.getRules)
         .map(rule => (rule, data))
         .asJava
     )
-      // only keep json objects
-      .filter((k, v) => v._2.isObject)
       // only keep rules that matches with the data
       .filter((k, v) => matcher.matches(v._2.asInstanceOf[ObjectNode], v._1.query))
       // render the template against the data

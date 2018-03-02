@@ -6,18 +6,23 @@ import com.socialmetrix.kafka.Stream
 import com.socialmetrix.lucene.Matcher
 import com.socialmetrix.ws.WsModule
 import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.scalalogging.StrictLogging
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 
 import scala.concurrent.ExecutionContext
 
-object Main {
+object Main extends StrictLogging {
 
   def main(args: Array[String]): Unit = {
     val injector = Guice.createInjector(MainModule, WsModule)
     try {
       val stream = injector.getInstance(classOf[Stream])
+      stream.setCloseListener {
+        closeWs(injector)
+      }
 
       stream.start()
+
       // on shutdown close the stream
       sys.addShutdownHook(stream.stop())
       // on shutdown close ws client
