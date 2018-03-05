@@ -21,6 +21,10 @@ class RulesService @Inject()(ws: StandaloneAhcWSClient)
                              actorSystem: ActorSystem) extends Retry {
 
   def getRules: Future[List[Rule]] = retry {
+    /*
+     * TODO can't log when actually executes requests using
+     *  filters because it logs even when getting responses from cache
+     */
     ws
       .url(config.getString("RulesService.url"))
       .getOnly2xx()

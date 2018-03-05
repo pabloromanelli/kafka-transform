@@ -23,7 +23,7 @@ services:
     image: wurstmeister/kafka:0.10.1.1
     networks:
       - kafka
-    command: "bash -c 'for i in `seq 1 100`;
+    command: "bash -c 'for i in `seq 1 10000`;
                        do
                          echo \"{\\\"value\\\":$$i}\" | /opt/kafka/bin/kafka-console-producer.sh --broker-list kafka:9092 --topic sourceTopic;
                          echo $$i;
@@ -32,16 +32,17 @@ services:
       - kafka
 
   rules:
-    image: clue/json-server
+    image: nginx:1.13-alpine
     volumes:
-      - ./mockRules/rules.json:/data/db.json
+      - ./mockRules/rules.json:/usr/share/nginx/json/rules.json:ro
+      - ./mockRules/rules.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - kafka-matcher
 
   kafka-transform:
     image: socialmetrix/kafka-transform
     environment:
-      - RulesService.url=http://rules/rules
+      - RulesService.url=http://rules/rules.json
       - kafka.application.id=kafka-transform
       - kafka.bootstrap.servers=kafka:9092
       - kafka.topic.source=sourceTopic

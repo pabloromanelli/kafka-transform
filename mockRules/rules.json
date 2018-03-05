@@ -1,18 +1,16 @@
-{
-  "rules": [
-    {
-      "query": "value:[5 TO 10}",
-      "template": {
-        "display": "5 <= {{value}} < 10",
-        "value": "{{value}}"
-      }
-    },
-    {
-      "query": "value:9 OR value:15",
-      "template": {
-        "display": "{{value}} is 9 or 15",
-        "value": "{{value}}"
-      }
+[
+  {
+    "query": "value:[5 TO 10}",
+    "template": {
+      "display": "5 <= {{value}} < 10",
+      "value": "{{value}}"
     }
-  ]
-}
+  },
+  {
+    "query": "value:9 OR value:15",
+    "template": {
+      "display": "{{value}} is 9 or 15",
+      "value": "{{value}}"
+    }
+  }
+]
