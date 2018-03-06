@@ -54,10 +54,6 @@ class Stream @Inject()(matcher: Matcher, rulesService: RulesService)
   private def buildTopology(kafkaConfig: Config): Topology = {
     val builder = new StreamsBuilder
 
-    val a: Predicate[AnyRef, (Rule, JsonNode)] = {
-      case (a: AnyRef, (c: Rule, d: JsonNode)) => true
-    }
-
     builder
       .stream[AnyRef, JsonNode](kafkaConfig.getString("topic.source"))
       .peek((k, v) => logger.trace("=> " + objectMapper.writeValueAsString(v)))
