@@ -15,7 +15,7 @@ libraryDependencies ++= Seq(
   "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.4",
   "com.typesafe" % "config" % "1.3.2",
   "com.typesafe.play" %% "play-ahc-ws-standalone" % "1.1.6",
-  "com.github.ben-manes.caffeine" % "jcache" % "2.6.1",
+  "com.github.ben-manes.caffeine" % "caffeine" % "2.6.2",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2",
   "org.apache.lucene" % "lucene-memory" % "7.2.1",
   "org.apache.lucene" % "lucene-queries" % "7.2.1",
