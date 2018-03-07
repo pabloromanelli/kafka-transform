@@ -20,7 +20,7 @@ import org.apache.kafka.streams.{KafkaStreams, StreamsBuilder, Topology}
 import scala.collection.JavaConverters._
 
 @Singleton
-class Stream @Inject()(matcher: Matcher, rulesService: RulesService)
+class Stream @Inject()(matcher: Matcher, rulesService: RulesService, templateEngine: Engine)
                       (implicit config: Config) extends StrictLogging {
 
   val kafkaConfig = config.getConfig("kafka")
@@ -30,7 +30,6 @@ class Stream @Inject()(matcher: Matcher, rulesService: RulesService)
   stream.setUncaughtExceptionHandler { (t, e) =>
     logger.error("Uncaught exception on kafka streams", e)
   }
-  val templateEngine = new Engine()
 
   def setCloseListener(f: => Unit) = {
     stream.setStateListener((newState, oldState) => {

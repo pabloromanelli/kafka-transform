@@ -9,8 +9,8 @@ scalacOptions := Seq("-deprecation", "-feature")
 libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "com.google.inject" % "guice" % "4.1.0",
-  "org.apache.kafka" % "kafka-clients" % "1.0.0",
-  "org.apache.kafka" % "kafka-streams" % "1.0.0",
+  "org.apache.kafka" % "kafka-clients" % "1.0.1",
+  "org.apache.kafka" % "kafka-streams" % "1.0.1",
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.9.4",
   "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.4",
   "com.typesafe" % "config" % "1.3.2",

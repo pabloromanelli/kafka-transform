@@ -62,9 +62,8 @@ class MatcherTest extends WordSpec with Matchers with TableDrivenPropertyChecks 
       // TODO can't mix floating point with integers
       ("y:[-124 TO -125]", false),
       ("y:[-123.3 TO -123.5]", false),
-      // TODO exact match over floating point numbers is not reliable
-      ("z:1.0", false),
-      ("""y:\-123.456789""", false),
+      ("z:1.0", true),
+      ("""y:\-123.456789""", true),
 
       // ranges of integer values with wildcards
       ("a:[* TO -120]", true),

@@ -1,9 +1,12 @@
 package com.socialmetrix
 
+import javax.inject.Singleton
+
 import akka.actor.ActorSystem
-import com.google.inject.{AbstractModule, Guice, Injector}
+import com.google.inject.{AbstractModule, Guice, Injector, Provides}
 import com.socialmetrix.kafka.Stream
 import com.socialmetrix.lucene.Matcher
+import com.socialmetrix.template.Engine
 import com.socialmetrix.ws.WsModule
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
@@ -43,7 +46,27 @@ object Main extends StrictLogging {
       val config = ConfigFactory.systemEnvironment().withFallback(ConfigFactory.load())
       bind(classOf[Config]).toInstance(config)
       bind(classOf[ExecutionContext]).toInstance(scala.concurrent.ExecutionContext.global)
-      bind(classOf[Matcher]).toInstance(new Matcher())
+    }
+
+    @Provides
+    @Singleton
+    def luceneMatcher(config: Config): Matcher =
+      new Matcher(
+        config.getString("LuceneMatcher.fieldSeparator")
+      )
+
+    @Provides
+    @Singleton
+    def templateEngine(mainConfig: Config): Engine = {
+      val config = mainConfig.getConfig("JsonTempalte")
+
+      new Engine(
+        config.getString("delimiters.start") -> config.getString("delimiters.end"),
+        config.getString("fieldSeparator"),
+        config.getString("metaPrefix"),
+        config.getString("thisIdentifier"),
+        config.getString("commandPrefix")
+      )
     }
   }
 

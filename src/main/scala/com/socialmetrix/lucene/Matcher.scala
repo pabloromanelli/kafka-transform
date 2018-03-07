@@ -24,6 +24,7 @@ class Matcher(fieldSeparator: String = ".", queryParser: QueryParser = NumericQu
   }
 
   protected def buildIndex(data: ObjectNode): MemoryIndex = {
+    // TODO support cached / compile rules to improve performance (using #reset)
     val index = new MemoryIndex()
     addFields(data, List(), index)
     index
@@ -95,12 +96,16 @@ object NumericQueryParser extends QueryParser("", lowerCaseASCIIFoldingAnalyzer)
   }
 
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Query = {
-    if (!quoted) {
+    if (quoted) {
+      super.getFieldQuery(field, queryText, quoted)
+    } else {
       Try(queryText.toLong)
         .map(LongPoint.newExactQuery(field, _))
+        .orElse(
+          Try(queryText.toDouble)
+            .map(DoublePoint.newExactQuery(field, _))
+        )
         .getOrElse(super.getFieldQuery(field, queryText, quoted))
-    } else {
-      super.getFieldQuery(field, queryText, quoted)
     }
   }
 }
