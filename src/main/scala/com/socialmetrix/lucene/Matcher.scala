@@ -10,6 +10,7 @@ import org.apache.lucene.analysis.{Analyzer, LowerCaseFilter}
 import org.apache.lucene.document.{DoublePoint, LongPoint}
 import org.apache.lucene.index.memory.MemoryIndex
 import org.apache.lucene.queryparser.classic.QueryParser
+import org.apache.lucene.queryparser.classic.QueryParser.Operator.AND
 import org.apache.lucene.search.Query
 
 import scala.collection.JavaConverters._
@@ -55,6 +56,7 @@ class Matcher(fieldSeparator: String = ".", queryParser: QueryParser = NumericQu
 
 object NumericQueryParser extends QueryParser("", lowerCaseASCIIFoldingAnalyzer) {
   setAllowLeadingWildcard(true)
+  setDefaultOperator(AND)
 
   override def getRangeQuery(field: String, part1: String, part2: String, startInclusive: Boolean, endInclusive: Boolean): Query = {
     lazy val triedLong1 = Try(part1.toLong).map(p => if (startInclusive) p else Math.addExact(p, 1))

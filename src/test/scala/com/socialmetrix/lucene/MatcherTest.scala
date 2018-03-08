@@ -15,12 +15,12 @@ class MatcherTest extends WordSpec with Matchers with TableDrivenPropertyChecks 
       |    "c": "abc -123",
       |    "d": [
       |      {
-      |        "e": "x x x",
+      |        "e": "x1 x2 x3",
       |        "f": "y y y",
       |        "g": -10
       |      },
       |      {
-      |        "e": "mmm mmm",
+      |        "e": "mmm1 mmm2",
       |        "f": "jjj jjj",
       |        "g": 1000
       |      }
@@ -39,8 +39,8 @@ class MatcherTest extends WordSpec with Matchers with TableDrivenPropertyChecks 
       ("*:*", true),
 
       // exact integer values
-      ( """a:\-123""", true),
-      ( """a:"-123"""", false),
+      ("""a:\-123""", true),
+      ("""a:"-123"""", false),
       ("""b.d.g:\-10""", true),
       ("b.d.g:1000", true),
       ("b.d.g:9", false),
@@ -127,9 +127,26 @@ class MatcherTest extends WordSpec with Matchers with TableDrivenPropertyChecks 
       ("b.d.f:j*", true),
       // TODO can we support * for field names?
       ("*:abc", false),
+      // TODO should match as the * field name
+      ("mmm", false),
 
       // boolean ops
       ("a:120 OR a:\\-123", true),
+      ("a:120 a:\\-123", false),
+      // if not specified, all terms Must be present (+)
+      ("a:120 +a:\\-123", false),
+      ("+a:120 +a:\\-123", false),
+      ("a:120 AND a:\\-123", false),
+      ("a:\\-123 AND a:120", false),
+      ("b.d.e:(x1 mmm1)", true),
+      ("b.d.e:\"x3 mmm1\"", true),
+      ("b.d.e:\"x1 x2 x3 mmm1 mmm2\"", true),
+      ("b.d.e:\"x2 x1 x3 mmm1 mmm2\"", false),
+      ("b.d.e:\"x1 mmm1\"", false),
+      ("b.d.e:\"mmm1 x1\"", false),
+      ("b.d.e:(x1 asdfsadf)", false),
+      // matches like (b.d.e:x1 AND :mmm1)
+      ("b.d.e:x1 mmm1", false),
       ("a:[-123 TO -100] AND a:{-125 TO -120}", true),
       ("a:{-123 TO -100] AND a:{-125 TO -120}", false),
       ("(a:[100 TO 120] AND b.d.g:1000) OR (b.d.g:1000 AND a:\\-123)", true),

@@ -189,7 +189,17 @@ You can use all expressions supported by the Lucene default query parser.
 Every value field is temporarily "indexed" using a [MemoryIndex](https://lucene.apache.org/core/7_2_1/memory/org/apache/lucene/index/memory/MemoryIndex.html).
 If an object or array is empty, it doesn't get indexed.
 
-**Warning:** You can't use expressions without a field (there is no default field defined).
+**Warning:** You can't use expressions without a field (there is no default field defined). So, in order to match multiple terms against a single field you could:
+- Enclose the terms with `()`: `fullName:(John Doe)`
+- Repeat the field name for each term: `fullName:John fullName:Doe`
+
+#### Boolean Queries
+You can use:
+- Match mandatory or optionally: `AND`, `OR` (between query expressions)
+- Negate a term: `-` (in front of a query expression)
+
+The default operator is `AND`. This means that:
+`firstName:John lastName:Doe` is the same as `firstName:John AND lastName:Doe`.
 
 #### Nested fields
 Nested fields are flattened using `LuceneMatcher.fieldSeparator` config (defaults to `.`).
@@ -200,14 +210,24 @@ Fields of objects inside an array are all indexed on the same field. Because of 
 ```json
 {
   "users": [
-    { "age": 22 },
-    { "age": 33 },
-    { "age": 44 }
+    { "name": "John", "age": 22 },
+    { "name": "Jane", "age": 33 },
+    { "name": "Other", "age": 44 }
   ]
 }
 ```
 
-The queries `users.age:22` and `users.age:33` will match, even `users.age:22 AND users.age:33` will match.
+So, the following queries will match:
+- `users.name:John`
+- `users.name:Jane`
+- `users.name:John AND users.name:Jane`
+- `users.name:John AND users.age:22`
+- `users.name:John AND users.age:33` (there is no relation between fields of an array)
+
+**Note:** Order of terms inside an array is important, the terms are indexed as if all where concatenated one after the other in order.
+
+- This will match: `users.name:"John Jane Other"`
+- This won't match: `users.name:"Other John Jane"`
 
 #### Types
 We need to differentiate the types inside the json message and the types inside the query values.
