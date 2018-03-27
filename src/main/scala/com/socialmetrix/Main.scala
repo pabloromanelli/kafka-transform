@@ -4,6 +4,7 @@ import javax.inject.Singleton
 
 import akka.actor.ActorSystem
 import com.google.inject.{AbstractModule, Guice, Injector, Provides}
+import com.socialmetrix.apis.RulesModule
 import com.socialmetrix.kafka.Stream
 import com.socialmetrix.lucene.Matcher
 import com.socialmetrix.template.Engine
@@ -17,7 +18,8 @@ import scala.concurrent.ExecutionContext
 object Main extends StrictLogging {
 
   def main(args: Array[String]): Unit = {
-    val injector = Guice.createInjector(MainModule, WsModule)
+    val config = ConfigFactory.systemEnvironment().withFallback(ConfigFactory.load())
+    val injector = Guice.createInjector(new MainModule(config), new RulesModule(config), WsModule)
     try {
       val stream = injector.getInstance(classOf[Stream])
       stream.setCloseListener {
@@ -41,9 +43,8 @@ object Main extends StrictLogging {
     injector.getInstance(classOf[ActorSystem]).terminate()
   }
 
-  object MainModule extends AbstractModule {
+  class MainModule(config: Config) extends AbstractModule {
     override def configure(): Unit = {
-      val config = ConfigFactory.systemEnvironment().withFallback(ConfigFactory.load())
       bind(classOf[Config]).toInstance(config)
       bind(classOf[ExecutionContext]).toInstance(scala.concurrent.ExecutionContext.global)
     }
@@ -58,7 +59,7 @@ object Main extends StrictLogging {
     @Provides
     @Singleton
     def templateEngine(mainConfig: Config): Engine = {
-      val config = mainConfig.getConfig("JsonTempalte")
+      val config = mainConfig.getConfig("JsonTemplate")
 
       new Engine(
         config.getString("delimiters.start") -> config.getString("delimiters.end"),

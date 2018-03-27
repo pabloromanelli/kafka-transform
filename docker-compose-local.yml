@@ -31,18 +31,11 @@ services:
     depends_on:
       - kafka
 
-  rules:
-    image: nginx:1.13-alpine
-    volumes:
-      - ./mockRules/rules.json:/usr/share/nginx/json/rules.json:ro
-      - ./mockRules/rules.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - kafka-matcher
-
   kafka-transform:
     image: socialmetrix/kafka-transform
     environment:
-      - RulesService.url=http://rules/rules.json
+      - rules.type=local
+      - rules.local=[{"query":"value:[5 TO 10}","template":{"display":"5 <= {{value}} < 10","value":"{{value}}"}}]
       - kafka.application.id=kafka-transform
       - kafka.bootstrap.servers=kafka:9092
       - kafka.topic.source=sourceTopic

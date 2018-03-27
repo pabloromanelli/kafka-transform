@@ -23,7 +23,7 @@ Filter and transform messages from one Kafka topic to another.
 
 ### What it does
 For each message on the source topic Kafka Transform will:
-1. Request the current rules to the rules url (can be cached)
+1. Request the current rules to the rules url (can be cached) or the env variable
 1. For each rule:
     1. Evaluate the query over the message
     1. If matches, apply the template of the rule
@@ -36,11 +36,11 @@ For each message on the source topic Kafka Transform will:
 
 ## Run
 
-#### Local
+#### Single host
 
 ```bash
 docker run -d \
-  -e RulesService.url=http://localhost/rules.json \
+  -e rules.url=http://localhost/rules.json \
   -e kafka.application.id=my-transform \
   -e kafka.bootstrap.servers=localhost:9092 \
   -e kafka.topic.source=sourceTopic \
@@ -51,9 +51,23 @@ docker run -d \
 
 #### Docker Swarm
 
+Using remote rules service
 ```bash
 docker service create \
-  -e RulesService.url=http://localhost/rules.json \
+  -e rules.url=http://localhost/rules.json \
+  -e kafka.application.id=my-transform \
+  -e kafka.bootstrap.servers=localhost:9092 \
+  -e kafka.topic.source=sourceTopic \
+  -e kafka.topic.sink=sinkTopic \
+  --name my-transform \
+  socialmetrix/kafka-transform
+```
+
+Using local rules
+```bash
+docker service create \
+  -e rules.type=local \
+  -e 'rules.local=[{"query":"value:9","template":"{{$this}}"}]' \
   -e kafka.application.id=my-transform \
   -e kafka.bootstrap.servers=localhost:9092 \
   -e kafka.topic.source=sourceTopic \
@@ -135,15 +149,19 @@ All messages will be transformed to an object having a single field mixing the u
 }
 ```
 
-### Http Client
-We use [play-ws](https://github.com/playframework/play-ws) as HTTP client.
+### Remote or Local rules
+You can have rules hosted in an external HTTP server or defined locally using `rules.local` env variable.
 
-The rules service must be able to listen to GET requests to `RulesService.url` and return a Json Array with Rule objects as defined before.
+For remote rules we use [play-ws](https://github.com/playframework/play-ws) as HTTP client.
+
+The rules service must be able to listen to GET requests to `rules.url` and return a Json Array with Rule objects as defined before.
 
 ##### Configuration
-The url of the rules is a required configuration:
+By default the `rules.type` is `remote`. If you want to use local rules, you must change `rules.type` to `local` and define `rules.local` with a json array of rules.
+
+The url of the rules is a required for `remote` rules:
 ```
-RulesService.url=http://rules.service.com/rules
+rules.url=http://rules.service.com/rules
 ```
 
 Also, you can override the default values of the following reference.conf files using env variables:
