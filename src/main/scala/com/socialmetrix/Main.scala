@@ -2,8 +2,7 @@ package com.socialmetrix
 
 import javax.inject.Singleton
 
-import akka.actor.ActorSystem
-import com.google.inject.{AbstractModule, Guice, Injector, Provides}
+import com.google.inject.{AbstractModule, Guice, Provides}
 import com.socialmetrix.apis.RulesModule
 import com.socialmetrix.kafka.Stream
 import com.socialmetrix.lucene.Matcher
@@ -11,7 +10,6 @@ import com.socialmetrix.template.Engine
 import com.socialmetrix.ws.WsModule
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
-import play.api.libs.ws.ahc.StandaloneAhcWSClient
 
 import scala.concurrent.ExecutionContext
 
@@ -20,27 +18,12 @@ object Main extends StrictLogging {
   def main(args: Array[String]): Unit = {
     val config = ConfigFactory.systemEnvironment().withFallback(ConfigFactory.load())
     val injector = Guice.createInjector(new MainModule(config), new RulesModule(config), WsModule)
-    try {
-      val stream = injector.getInstance(classOf[Stream])
-      stream.setCloseListener {
-        closeWs(injector)
-      }
+    val stream = injector.getInstance(classOf[Stream])
 
-      stream.start()
+    stream.start()
 
-      // on shutdown close the stream
-      sys.addShutdownHook(stream.stop())
-      // on shutdown close ws client
-      sys.addShutdownHook(closeWs(injector))
-    } catch {
-      // on error close ws client
-      case e: Exception => closeWs(injector); throw e
-    }
-  }
-
-  private def closeWs(injector: Injector) = {
-    injector.getInstance(classOf[StandaloneAhcWSClient]).close()
-    injector.getInstance(classOf[ActorSystem]).terminate()
+    // on shutdown close the stream
+    sys.addShutdownHook(stream.stop())
   }
 
   class MainModule(config: Config) extends AbstractModule {

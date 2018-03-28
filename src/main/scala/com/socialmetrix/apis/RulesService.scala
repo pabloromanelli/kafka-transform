@@ -17,6 +17,8 @@ case class Rule(query: String, template: JsonNode)
 
 trait RulesService {
   def getRules: Future[List[Rule]]
+
+  def close(): Unit
 }
 
 @Singleton
@@ -36,6 +38,10 @@ class HttpRulesService @Inject()(ws: StandaloneAhcWSClient)
       .map(response => objectMapper.readValue[List[Rule]](response.body))
   }
 
+  override def close(): Unit = {
+    ws.close()
+    actorSystem.terminate()
+  }
 }
 
 @Singleton
@@ -43,6 +49,8 @@ class LocalRulesService @Inject()(config: Config) extends RulesService {
   def getRules: Future[List[Rule]] = Future.successful(
     objectMapper.readValue[List[Rule]](config.getString("rules.local"))
   )
+
+  override def close(): Unit = ()
 }
 
 class RulesModule(config: Config) extends AbstractModule {

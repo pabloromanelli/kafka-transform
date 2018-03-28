@@ -14,7 +14,6 @@ import com.socialmetrix.utils.FutureOps.sync
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.streams.KafkaStreams.State
-import org.apache.kafka.streams.kstream.Predicate
 import org.apache.kafka.streams.{KafkaStreams, StreamsBuilder, Topology}
 
 import scala.collection.JavaConverters._
@@ -27,27 +26,27 @@ class Stream @Inject()(matcher: Matcher, rulesService: RulesService, templateEng
   val streamingConfig = kafkaConfig.toProperties
   val topology = buildTopology(kafkaConfig)
   val stream = new KafkaStreams(topology, streamingConfig)
+
   stream.setUncaughtExceptionHandler { (t, e) =>
     logger.error("Uncaught exception on kafka streams", e)
   }
 
-  def setCloseListener(f: => Unit) = {
-    stream.setStateListener((newState, oldState) => {
-      newState match {
-        case State.ERROR => stop()
-        case State.NOT_RUNNING => f
-        case _ => // do nothing
-      }
-    })
-  }
+  stream.setStateListener((newState, _) => {
+    newState match {
+      case State.ERROR => stop()
+      case _ => // do nothing
+    }
+  })
 
   def start(): Unit = {
     stream.start()
   }
 
   def stop(): Unit = {
+    logger.info("Stoping kafka stream...")
     // timeout to avoid deadlock
     stream.close(5, TimeUnit.SECONDS)
+    rulesService.close()
   }
 
   private def buildTopology(kafkaConfig: Config): Topology = {
