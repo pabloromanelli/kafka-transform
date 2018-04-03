@@ -64,17 +64,20 @@ docker service create \
 ```
 
 Using local rules
-```bash
+```bash  
 docker service create \
   -e rules.type=local \
-  -e 'rules.local=[{"query":"value:9","template":"{{$this}}"}]' \
-  -e kafka.application.id=my-transform \
+  -e JsonTemplate.delimiters.start='<<' \
+  -e JsonTemplate.delimiters.end='>>' \
+  -e rules.local='[{"query":"value:9","template":"<<$this>>"}]' \
+  -e kafka.application.id=qa-lat-opinions \
   -e kafka.bootstrap.servers=localhost:9092 \
   -e kafka.topic.source=sourceTopic \
   -e kafka.topic.sink=sinkTopic \
   --name my-transform \
   socialmetrix/kafka-transform
 ```
+Note: json template delimiters must change to avoid conflicts with docker env variable template syntax.
 
 ## Scale
 You can scale the service just by launching more processes.
