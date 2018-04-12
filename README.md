@@ -543,6 +543,17 @@ kafka-verifiable-consumer.sh --broker-list $SERVER --group-id $APPLICATION_ID --
 Exception in thread "main" org.apache.kafka.common.errors.InconsistentGroupProtocolException: The group member's supported protocols are incompatible with those of existing members.
 ```
 
+### Reset Streaming Application
+Will move the offset of the application on the topic to 0.
+
+1. Stop all consumers of the group
+1. Run kafka-streams-application-reset.sh
+1. Start the application
+
+```bash
+kafka-streams-application-reset.sh --bootstrap-servers $SERVER --application-id $APPLICATION_ID --input-topics $TOPIC
+```
+
 ### Topic offset range
 ```bash
 kafka-run-class.sh kafka.tools.GetOffsetShell --broker-list $SERVER --topic $TOPIC
