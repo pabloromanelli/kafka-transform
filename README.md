@@ -214,6 +214,8 @@ If an object or array is empty, it doesn't get indexed.
 - Enclose the terms with `()`: `fullName:(John Doe)`
 - Repeat the field name for each term: `fullName:John fullName:Doe`
 
+**Warning:** To allow user input as plain text for a value, you must escape it with `QueryParserBase.escape`. If not, it could be interpreted as operators or other types of expressions.
+
 #### Boolean Queries
 You can use:
 - Match mandatory or optionally: `AND`, `OR` (between query expressions)
@@ -262,6 +264,10 @@ Single value:
 1. If the value can be parsed as a Double its converted to a query using [DoublePoint](https://lucene.apache.org/core/7_2_1/core/org/apache/lucene/document/DoublePoint.html)
 1. If none of the above match, its a terms query without change
 
+Multiple values for a single field ("IN" query):
+- Doing `field:(value1 value2)` is the same as `field:value1 field:value2` (all values are required / `AND` mixed).
+- If you wan't something similar to an "IN" query: `field:(value1 OR value2)`.
+
 Ranges:
 1. If one of the ends is a wildcard `*`
     1. If one of the ends can be parsed as Long, its converted to a range query using `LongPoint`
@@ -295,6 +301,9 @@ Json message integer values are indexed using [LongPoint](https://lucene.apache.
 
 ##### Floating Point Numbers
 Json message floating point values are indexed using [DoublePoint](https://lucene.apache.org/core/7_2_1/core/org/apache/lucene/document/DoublePoint.html)
+
+##### Integers & Floats: Escape minus!
+For both types of numbers, remember to always escape the `-` (minus) sign with `\`. If not escaped, the term will be negated.
 
 ##### String
 - Json message and query values are analyzed with:

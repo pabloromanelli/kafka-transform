@@ -38,6 +38,16 @@ class MatcherTest extends WordSpec with Matchers with TableDrivenPropertyChecks 
       ("query", "matches"),
       ("*:*", true),
 
+      // string value IN query
+      ("""b.c:(a OR b)""", false),
+      ("""b.c:(a OR "abc -123")""", true),
+      ("""b.c:(a OR abc)""", true),
+      ("""b.c:("-123" abc)""", true),
+      ("""b.c:("-123" OR x)""", true),
+      // without quotes, long doesn't match string
+      ("""b.c:(\-123 OR x)""", false),
+      ("""b.c:("-123" x)""", false),
+
       // exact integer values
       ("""a:\-123""", true),
       ("""a:"-123"""", false),
