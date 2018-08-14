@@ -2,7 +2,6 @@ package com.socialmetrix.kafka
 
 import java.util.Properties
 import java.util.concurrent.TimeUnit
-import javax.inject.{Inject, Singleton}
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -13,7 +12,9 @@ import com.socialmetrix.template.Engine
 import com.socialmetrix.utils.FutureOps.sync
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import javax.inject.{Inject, Singleton}
 import org.apache.kafka.streams.KafkaStreams.State
+import org.apache.kafka.streams.kstream.ValueMapper
 import org.apache.kafka.streams.{KafkaStreams, StreamsBuilder, Topology}
 
 import scala.collection.JavaConverters._
@@ -52,21 +53,25 @@ class Stream @Inject()(matcher: Matcher, rulesService: RulesService, templateEng
   private def buildTopology(kafkaConfig: Config): Topology = {
     val builder = new StreamsBuilder
 
+    // type inference is not capable to handle the overloaded methods
+    val getRules: ValueMapper[JsonNode, java.lang.Iterable[(Rule, JsonNode)]] = (data: JsonNode) =>
+      sync(rulesService.getRules)
+        .map(rule => (rule, data))
+        .asJava
+    val transformTemplate: ValueMapper[(Rule, JsonNode), JsonNode] = (v: (Rule, JsonNode)) =>
+      templateEngine.transform(v._1.template, v._2).get
+
     builder
       .stream[AnyRef, JsonNode](kafkaConfig.getString("topic.source"))
       .peek((k, v) => logger.trace("=> " + objectMapper.writeValueAsString(v)))
       // only keep json objects
       .filter((k, v) => v.isObject)
       // create a new message for each rule
-      .flatMapValues[(Rule, JsonNode)](data =>
-      sync(rulesService.getRules)
-        .map(rule => (rule, data))
-        .asJava
-    )
+      .flatMapValues[(Rule, JsonNode)](getRules)
       // only keep rules that matches with the data
       .filter((k, v) => matcher.matches(v._2.asInstanceOf[ObjectNode], v._1.query))
       // render the template against the data
-      .mapValues[JsonNode](v => templateEngine.transform(v._1.template, v._2).get)
+      .mapValues[JsonNode](transformTemplate)
       .peek((k, v) => logger.trace("<= " + objectMapper.writeValueAsString(v)))
       .to(kafkaConfig.getString("topic.sink"))
 
@@ -79,7 +84,7 @@ class Stream @Inject()(matcher: Matcher, rulesService: RulesService, templateEng
       val properties = new Properties()
       config.entrySet()
         .forEach(e =>
-          properties.setProperty(e.getKey(), config.getString(e.getKey()))
+          properties.setProperty(e.getKey, config.getString(e.getKey))
         )
       properties
     }
